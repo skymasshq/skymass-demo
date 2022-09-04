@@ -1,0 +1,15 @@
+{
+  "name": "skymass-demo",
+  "version": "1.0.0",
+  "description": "SkyMass Demos",
+  "main": "index.js",
+  "scripts": {
+    "start": "node neon_todolist.mjs"
+  },
+  "author": "pasha@skymass.dev",
+  "license": "ISC",
+  "dependencies": {
+    "@skymass/skymass": "^0.1.73",
+    "pg-promise": "^10.12.0"
+  }
+}

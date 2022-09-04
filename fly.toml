@@ -1,0 +1,18 @@
+# fly.toml file generated for skymass-demo on 2022-09-02T15:24:37-07:00
+
+app = "skymass-demo"
+
+kill_signal = "SIGINT"
+kill_timeout = 5
+processes = []
+
+[build]
+  builder = "heroku/buildpacks:20"
+
+[env]
+
+[experimental]
+  allowed_public_ports = []
+  auto_rollback = true
+
+[[services]]
