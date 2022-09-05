@@ -10,4 +10,4 @@ This repository contains examples that showcase SkyMass and interact with other 
 
 ##### [Neon DB + SkyMass](https://skymass.dev/app/skymass-demo/neon-todolist)
 
-A simple Todo List using [Neon DB](https://neon.tech) as the database. [Source](./neon_todolist.mjs).
+A simple Todo List in less than 80 SLoC using [Neon DB](https://neon.tech) as the database. [Source](./neon_todolist.mjs).
