@@ -9,7 +9,8 @@
   "author": "pasha@skymass.dev",
   "license": "ISC",
   "dependencies": {
-    "@skymass/skymass": "^0.1.73",
+    "@skymass/skymass": "^0.1.75",
+    "firebase-admin": "^11.0.1",
     "pg-promise": "^10.12.0"
   }
 }

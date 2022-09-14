@@ -1,36 +1,62 @@
 import { SkyMass } from "@skymass/skymass";
-import pgPromise from "pg-promise";
+import admin from "firebase-admin";
 
-// open a db connection to Neon
-const pgp = pgPromise({});
-const db = pgp(process.env["NEON_DSN"]);
+// NOTE: this entire script runs exclusively on the server.  The UI is provided by SkyMass.
+
+const firebase = admin.initializeApp({
+  credential: admin.credential.cert(
+    JSON.parse(process.env["FIREBASE_CERT_JSON"])
+  ),
+  databaseURL: process.env["FIREBASE_RTDB_URL"],
+});
+
+// utility function to return a firebase reference
+// to the user's todos and optionally a specific todo id
+function dbRef(email, id) {
+  const emailEsc = email.replace(/[.#$/[\]]/g, "_");
+  return firebase.database().ref("todos/" + emailEsc + (id ? "/" + id : ""));
+}
 
 // create a SkyMass instance
 const sm = new SkyMass({ key: process.env["SKYMASS_KEY"] });
 
 // register the application
-sm.page("/neon-todolist", async (ui) => {
+sm.page("/firebase-todolist", async (ui) => {
   // This function is run on first app access and every time something
   // significant happens in the UI (for example when a button is pressed,
   // a table row is selected, ...)
 
   // SkyMass uses Markdown to emit and format text.
   // Here we emit a level 1 (#) header
-  ui.md`# ☑️ Neon DB Todo List`;
+  ui.md`# ☑️ Firebase Todo List`;
 
   // This app is configured at skymass.dev to require a login
   // so user will always be set to { email: ... }
   const { email } = ui.user();
 
-  // A checkbox input to control whether we include completed todos
-  const hideDone = ui.boolean("hide_done", { label: "Hide Completed Todos" });
-
-  // SELECT user's todos from the database. Note that todos is a Promise.
-  // SkyMass widgets handle literal values or Promises out of the box
-  const todos = db.any(
-    "SELECT id, title, due_by, done FROM todos WHERE created_by = $(email)" +
-      (hideDone.val ? " AND NOT done" : ""),
-    { email }
+  // Firebase Real Time DB let's us subscribe to update events.
+  // Let's create a subscription using ui.subscribe()
+  const UserTodoList = ui.subscribe(
+    "todos_subscription",
+    (update) => {
+      const userTodos = dbRef(email);
+      const handler = (snapshot) => {
+        const val = snapshot.val() || {};
+        // convert Firebase object to an array
+        const list = Object.keys(val).map((id) => {
+          const todo = val[id];
+          todo.id = id;
+          todo.due_by = new Date(todo.due_by);
+          return todo;
+        });
+        // call update with the latest todo list
+        update(list);
+      };
+      userTodos.on("value", handler);
+      // return a cleanup function
+      return () => userTodos.off("value", handler);
+    },
+    []
   );
 
   // SkyMass Markdown supports mentioning widgets using {widget_id} to
@@ -41,10 +67,11 @@ sm.page("/neon-todolist", async (ui) => {
   ui.md`{todos} ~ ~`;
 
   // Render table with the items returned from the query
-  // Note that 'todos', which contains the list of todos is a Promise.
+  // Note that UserTodoListObservable is an RxJS Observable!
+  // ui.table will automatically re-render every time the Observable's value is updated.
   // The optional columns prop specifies col rendering options.
-  const table = ui.table("todos", todos, {
-    loading: "Loading Todos...",
+  const table = ui.table("todos", UserTodoList, {
+    loading: "Loading Todos from Firebase",
     empty: "No Pending Todos.  Use 'New Todo' to add some.",
     columns: {
       "*": { search: false },
@@ -68,10 +95,7 @@ sm.page("/neon-todolist", async (ui) => {
   // .didClick toggles true when the button is clicked causing
   // this code block to be entered once per button click
   if (toggle.didClick) {
-    // note: we can await async operations
-    await db.none("UPDATE todos SET done = NOT done WHERE id = $(id)", {
-      id: todo.id,
-    });
+    await dbRef(email, todo.id).update({ done: !todo.done });
     ui.toast(todo.done ? "Marked as todo" : "Marked as done");
   }
 
@@ -83,9 +107,7 @@ sm.page("/neon-todolist", async (ui) => {
   if (del.didClick) {
     // modal interactions, like ui.confirm, return Promises which we await!
     if (await ui.confirm({ text: "Are you sure?" })) {
-      await db.none("DELETE FROM todos WHERE id = $(id)", {
-        id: todo.id,
-      });
+      dbRef(email, todo.id).remove();
       ui.toast("Deleted");
     }
   }
@@ -100,7 +122,6 @@ sm.page("/neon-todolist", async (ui) => {
     await ui.modal("add", async (ui) => {
       ui.md`#### New Todo`;
 
-      // default due by date
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
 
@@ -120,14 +141,12 @@ sm.page("/neon-todolist", async (ui) => {
       // similar to button .didClick, .didSubmit toggles true when the form is submitted
       // newTodo.val will contain { title: ..., due_by: ...}
       if (newTodo.didSubmit) {
-        await db.none(
-          `
-          INSERT INTO todos 
-            (title, due_by, created_by) 
-          VALUES 
-            ($(title), $(due_by), $(email))`,
-          { ...newTodo.val, email }
-        );
+        const { title, due_by } = newTodo.val;
+        await dbRef(email).push().set({
+          title,
+          due_by: due_by.toISOString(), // store dates as a serializable format
+          done: false,
+        });
         ui.toast("Added new todo");
         ui.close();
       }
@@ -135,5 +154,5 @@ sm.page("/neon-todolist", async (ui) => {
   }
 
   // link to this file
-  ui.md`[View Source on GitHub](https://github.com/skymasshq/skymass-demo/blob/main/neon_todolist.mjs)`;
+  ui.md`[View Source on GitHub](https://github.com/skymasshq/skymass-demo/blob/main/firebase_todolist.mjs)`;
 });
