@@ -1,6 +1,8 @@
 import { SkyMass } from "@skymass/skymass";
 import pgPromise from "pg-promise";
 
+// NOTE: this entire script runs exclusively on the server.  The UI is provided by SkyMass.
+
 // open a db connection to Neon
 const pgp = pgPromise({});
 const db = pgp(process.env["NEON_DSN"]);
@@ -25,25 +27,26 @@ sm.page("/neon-todolist", async (ui) => {
   // A checkbox input to control whether we include completed todos
   const hideDone = ui.boolean("hide_done", { label: "Hide Completed Todos" });
 
-  // SELECT user's todos from the database. Note that todos is a Promise.
-  // SkyMass widgets handle literal values or Promises out of the box
-  const todos = db.any(
+  // SELECT user's todos from the database. db.any returns a Promise.
+  const todosPromise = db.any(
     "SELECT id, title, due_by, done FROM todos WHERE created_by = $(email)" +
       (hideDone.val ? " AND NOT done" : ""),
     { email }
   );
 
-  // SkyMass Markdown supports mentioning widgets using {widget_id} to
-  // control their placement. {widgets} on the same line results in laying
-  //  the out in a single row with equal with cols.  "~" means an empty column.
-  // In this case, we are rendering {todos} followed by two empty cols
+ // SkyMass Markdown supports mentioning widgets using {widget_id} to
+  // control their placement. {widgets} on the same line are laid out in 
+  // a single row with equal width cols.  
+  // "~" means an empty column. In this case, we are rendering 
+  //      `{todos} ~ ~` 
   // which means todos will occupy 1/3 of the available row width.
   ui.md`{todos} ~ ~`;
 
   // Render table with the items returned from the query
-  // Note that 'todos', which contains the list of todos is a Promise.
+  // Note that 'todosPromise', which contains the list of todos is a Promise.
+  // ui.table automatically handles literals or Promises.
   // The optional columns prop specifies col rendering options.
-  const table = ui.table("todos", todos, {
+  const table = ui.table("todos", todosPromise, {
     loading: "Loading Todos...",
     empty: "No Pending Todos.  Use 'New Todo' to add some.",
     columns: {

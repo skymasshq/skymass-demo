@@ -12,7 +12,7 @@ A simple Todo List in ~80 SLoC using [Neon DB](https://neon.tech) as the databas
 
 ##### FireBase Todo List [Live Demo](https://skymass.dev/app/skymass-demo/firebase-todolist) / [View Source](./firebase_todolist.mjs)
 
-A simple Todo List in ~95 SLoC using [FireBase](https://firebase.com) as the database. The cool thing about this demo is that it takes advantage of FireBase Real Time DB.  You can open two tabs with the same login and see your changes in one tab synced in the other tab!
+A simple Todo List in ~105 SLoC using [FireBase](https://firebase.com) as the database. The cool thing about this demo is that it takes advantage of FireBase Real Time DB.  You can open two tabs with the same login and see your changes in one tab synced in the other tab!
 
 ##### Your Service Here?
 

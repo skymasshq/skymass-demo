@@ -3,19 +3,13 @@ import admin from "firebase-admin";
 
 // NOTE: this entire script runs exclusively on the server.  The UI is provided by SkyMass.
 
+// initalize Firebase...
 const firebase = admin.initializeApp({
   credential: admin.credential.cert(
     JSON.parse(process.env["FIREBASE_CERT_JSON"])
   ),
   databaseURL: process.env["FIREBASE_RTDB_URL"],
 });
-
-// utility function to return a firebase reference
-// to the user's todos and optionally a specific todo id
-function dbRef(email, id) {
-  const emailEsc = email.replace(/[.#$/[\]]/g, "_");
-  return firebase.database().ref("todos/" + emailEsc + (id ? "/" + id : ""));
-}
 
 // create a SkyMass instance
 const sm = new SkyMass({ key: process.env["SKYMASS_KEY"] });
@@ -34,42 +28,44 @@ sm.page("/firebase-todolist", async (ui) => {
   // so user will always be set to { email: ... }
   const { email } = ui.user();
 
+  // A checkbox input to control whether we include completed todos
+  // It's .val is used below to filter the done todos.
+  const hideDone = ui.boolean("hide_done", { label: "Hide Completed Todos" });
+
   // Firebase Real Time DB let's us subscribe to update events.
   // Let's create a subscription using ui.subscribe()
+  // Everytime the "update" function is called, UserTodoList is
+  // updated to the latest value.  UserTodoList is used later
+  // in the code to populate a table that lists the todos.
   const UserTodoList = ui.subscribe(
     "todos_subscription",
     (update) => {
       const userTodos = dbRef(email);
+      // Firebase gives us an object or null so we need a function to
+      // convert it into an array of todos to render as rows in a table.
       const handler = (snapshot) => {
-        const val = snapshot.val() || {};
-        // convert Firebase object to an array
-        const list = Object.keys(val).map((id) => {
-          const todo = val[id];
-          todo.id = id;
-          todo.due_by = new Date(todo.due_by);
-          return todo;
-        });
+        const list = convertSnapShotToList(snapshot, hideDone.val);
         // call update with the latest todo list
         update(list);
       };
+      // register the handler
       userTodos.on("value", handler);
       // return a cleanup function
       return () => userTodos.off("value", handler);
     },
-    []
+    [hideDone]
   );
 
   // SkyMass Markdown supports mentioning widgets using {widget_id} to
-  // control their placement. {widgets} on the same line results in laying
-  //  the out in a single row with equal with cols.  "~" means an empty column.
-  // In this case, we are rendering {todos} followed by two empty cols
+  // control their placement. {widgets} on the same line are laid out in
+  // a single row with equal width cols.
+  // "~" means an empty column. In this case, we are rendering
+  //      `{todos} ~ ~`
   // which means todos will occupy 1/3 of the available row width.
   ui.md`{todos} ~ ~`;
 
-  // Render table with the items returned from the query
-  // Note that UserTodoListObservable is an RxJS Observable!
-  // ui.table will automatically re-render every time the Observable's value is updated.
-  // The optional columns prop specifies col rendering options.
+  // Render table with the latest todos contained in UserTodoList
+  // that we set up earlier with ui.subscribe
   const table = ui.table("todos", UserTodoList, {
     loading: "Loading Todos from Firebase",
     empty: "No Pending Todos.  Use 'New Todo' to add some.",
@@ -156,3 +152,27 @@ sm.page("/firebase-todolist", async (ui) => {
   // link to this file
   ui.md`[View Source on GitHub](https://github.com/skymasshq/skymass-demo/blob/main/firebase_todolist.mjs)`;
 });
+
+// utility function to return a firebase reference
+// to the user's todos and optionally a specific todo id
+function dbRef(email, id) {
+  const emailEsc = email.replace(/[.#$/[\]]/g, "_");
+  return firebase.database().ref("todos/" + emailEsc + (id ? "/" + id : ""));
+}
+
+// utility function to convert a Firebase snapshot object to an
+// array of todos suitable for feeding to ui.table
+function convertSnapShotToList(snapshot, hideDone = false) {
+  const val = snapshot.val() || {};
+  return (
+    Object.keys(val)
+      .map((id) => {
+        const todo = val[id];
+        todo.id = id;
+        todo.due_by = new Date(todo.due_by);
+        return todo;
+      })
+      // if hideDone is true, filter out the done todos
+      .filter((todo) => (hideDone ? !todo.done : true))
+  );
+}
