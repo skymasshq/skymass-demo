@@ -15,4 +15,5 @@ kill_timeout = 5
 [processes]
   neon_todolist = "node neon_todolist.mjs"
   firebase_todolist = "node firebase_todolist.mjs"
+  supabase_todolist = "node supabase_todolist.mjs"
 
