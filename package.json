@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "SkyMass Demos",
   "main": "index.js",
+  "engines": {
+    "node": "16.*"
+  },
   "scripts": {
     "start": "node neon_todolist.mjs"
   },

@@ -4,89 +4,6 @@ const { createCanvas } = Canvas;
 
 const sm = new SkyMass({ key: process.env["SKYMASS_KEY"] });
 
-function sq(a) {
-  return a * a;
-}
-
-function dist(a, b) {
-  return Math.sqrt(sq(a.x - b.x) + sq(a.y - b.y));
-}
-
-function round(n, p = 1) {
-  const x = Math.pow(10, p);
-  return Math.round(x * n) / x;
-}
-
-// used in Cells to compute a cell's value,
-// including parsing formulas and following the refernces
-// cell = A1
-// cells { A1: 5, ... }
-// visited { A1: true, ... }
-function compute(cell, cells, visited = {}) {
-  visited[cell] = true;
-  const value = cells[cell];
-  function val(x) {
-    if (/^[A-J]+\d+/.test(x)) {
-      if (visited[x]) throw "!CYCLIC";
-      return compute(x, cells, visited);
-    } else {
-      const v = Number.parseFloat(x);
-      if (Number.isNaN(v)) {
-        throw "!NaN";
-      }
-      return v;
-    }
-  }
-  if (!value) {
-    return null;
-  } else if (value.startsWith("=")) {
-    const f = /([A-J]*\d+)\s*([+-/*])\s*([A-J]*\d+)/.exec(value);
-    if (!f) throw "!FORMULA";
-    const [all, a, op, b] = f;
-    const av = val(a);
-    const bv = val(b);
-    if (Number.isNaN(av)) {
-      throw `!BAD_${a}`;
-    }
-    if (Number.isNaN(bv)) {
-      throw `!BAD_${b}`;
-    }
-    switch (op) {
-      case "+":
-        return av + bv;
-      case "-":
-        return av - bv;
-      case "*":
-        return av * bv;
-      case "/":
-        if (bv) {
-          return av / bv;
-        } else {
-          throw "!DIV_BY_0";
-        }
-    }
-  }
-  return val(value);
-}
-
-function fmt(fn) {
-  const str = fn.toString();
-  const lines = str.split("\n").slice(1, -1);
-  const first = lines[0];
-  const leading_spaces = first.length - first.trimStart().length;
-  // trim up to x leading spaces
-  const re = new RegExp(`^\\s{0,${leading_spaces}}`);
-  const code = lines.map((line) => line.replace(re, "")).join("\n");
-  return code;
-}
-
-function code(ui, name, code) {
-  ui.region(name, code);
-  const src = fmt(code);
-  const sloc = src.split("\n").filter((line) => !/\s+\/\//.test(line)).length;
-  ui.md`###### Source (${sloc} SLoC)`;
-  ui.txt("source", md(["```\n" + src + "\n```"]));
-}
 
 async function counter(ui) {
   ui.md`
@@ -544,10 +461,98 @@ const TASKS = {
 
 sm.page("/seven-guis", async (ui) => {
   ui.md`
-  # 7 GUIs
-  An implementation of [7 GUIs](https://eugenkiss.github.io/7guis/) in [SkyMass](https://skymass.dev)
+  # 7GUIs
+  An implementation of [7GUIs](https://eugenkiss.github.io/7guis/) in [SkyMass](https://skymass.dev).  View source on [GitHub](https://github.com/skymasshq/skymass-demo/blob/main/seven_guis.mjs)
   `;
 
   const task = ui.nav("task_tab", { options: Object.keys(TASKS) });
   code(ui, task.val, TASKS[task.val]);
 });
+
+// Utility functions
+
+function sq(a) {
+  return a * a;
+}
+
+function dist(a, b) {
+  return Math.sqrt(sq(a.x - b.x) + sq(a.y - b.y));
+}
+
+function round(n, p = 1) {
+  const x = Math.pow(10, p);
+  return Math.round(x * n) / x;
+}
+
+// used in Cells to compute a cell's value,
+// including parsing formulas and following the refernces
+// cell = A1
+// cells { A1: 5, ... }
+// visited { A1: true, ... }
+function compute(cell, cells, visited = {}) {
+  visited[cell] = true;
+  const value = cells[cell];
+  function val(x) {
+    if (/^[A-J]+\d+/.test(x)) {
+      if (visited[x]) throw "!CYCLIC";
+      return compute(x, cells, visited);
+    } else {
+      const v = Number.parseFloat(x);
+      if (Number.isNaN(v)) {
+        throw "!NaN";
+      }
+      return v;
+    }
+  }
+  if (!value) {
+    return null;
+  } else if (value.startsWith("=")) {
+    const f = /([A-J]*\d+)\s*([+-/*])\s*([A-J]*\d+)/.exec(value);
+    if (!f) throw "!FORMULA";
+    const [all, a, op, b] = f;
+    const av = val(a);
+    const bv = val(b);
+    if (Number.isNaN(av)) {
+      throw `!BAD_${a}`;
+    }
+    if (Number.isNaN(bv)) {
+      throw `!BAD_${b}`;
+    }
+    switch (op) {
+      case "+":
+        return av + bv;
+      case "-":
+        return av - bv;
+      case "*":
+        return av * bv;
+      case "/":
+        if (bv) {
+          return av / bv;
+        } else {
+          throw "!DIV_BY_0";
+        }
+    }
+  }
+  return val(value);
+}
+
+// format js source code
+function fmt(fn) {
+  const str = fn.toString();
+  const lines = str.split("\n").slice(1, -1);
+  const first = lines[0];
+  const leading_spaces = first.length - first.trimStart().length;
+  // trim up to x leading spaces
+  const re = new RegExp(`^\\s{0,${leading_spaces}}`);
+  const code = lines.map((line) => line.replace(re, "")).join("\n");
+  return code;
+}
+
+// run code as a region + render it's source code
+function code(ui, name, code) {
+  ui.region(name, code);
+  const src = fmt(code);
+  const sloc = src.split("\n").filter((line) => !/\s+\/\//.test(line)).length;
+  ui.md`###### Source (${sloc} SLoC)`;
+  ui.txt("source", md(["```\n" + src + "\n```"]));
+}
