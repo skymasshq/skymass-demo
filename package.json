@@ -9,8 +9,9 @@
   "author": "pasha@skymass.dev",
   "license": "ISC",
   "dependencies": {
-    "@skymass/skymass": "^0.1.75",
+    "@skymass/skymass": "^0.1.77",
     "@supabase/supabase-js": "^1.35.7",
+    "canvas": "^2.10.1",
     "firebase-admin": "^11.0.1",
     "pg-promise": "^10.12.0"
   }

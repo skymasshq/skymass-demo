@@ -21,6 +21,11 @@ A simple Todo List in ~105 SLoC using [FireBase](https://firebase.com) as the da
 
 A simple Todo List in ~80 SLoC using [Supabase](https://supabase.com) as the database. 
 
+#### 7GUIs 
+[Live Demo](https://skymass.dev/app/skymass-demo/seven-guis) / [View Source](./seven_guis.mjs)
+
+[7GUIs](https://eugenkiss.github.io/7guis/) implemented using SkyMass.  The Cells demo is a work in progress. Tasks are completed in 20 - 120 SLoC!
+
 #### Your Service Here?
 
 Would you like to showcase your service or library? Create a PR or get in touch.

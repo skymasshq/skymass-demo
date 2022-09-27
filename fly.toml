@@ -16,4 +16,5 @@ kill_timeout = 5
   neon_todolist = "node neon_todolist.mjs"
   firebase_todolist = "node firebase_todolist.mjs"
   supabase_todolist = "node supabase_todolist.mjs"
+  seven_guis = "node seven_guis.mjs"
 
