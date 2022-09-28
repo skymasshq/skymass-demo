@@ -4,7 +4,6 @@ const { createCanvas } = Canvas;
 
 const sm = new SkyMass({ key: process.env["SKYMASS_KEY"] });
 
-
 async function counter(ui) {
   ui.md`
 #### Counter
@@ -544,8 +543,7 @@ function fmt(fn) {
   const leading_spaces = first.length - first.trimStart().length;
   // trim up to x leading spaces
   const re = new RegExp(`^\\s{0,${leading_spaces}}`);
-  const code = lines.map((line) => line.replace(re, "")).join("\n");
-  return code;
+  return lines.map((line) => line.replace(re, "")).join("\n");
 }
 
 // run code as a region + render it's source code
@@ -554,5 +552,5 @@ function code(ui, name, code) {
   const src = fmt(code);
   const sloc = src.split("\n").filter((line) => !/\s+\/\//.test(line)).length;
   ui.md`###### Source (${sloc} SLoC)`;
-  ui.txt("source", md(["```\n" + src + "\n```"]));
+  ui.code("source", { code: src, language: "javascript" });
 }
